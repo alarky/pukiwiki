@@ -45,8 +45,9 @@ define('PLUGIN_REF_IMAGE', '/\.(gif|png|jpe?g)$/i');
 // Usage (a part of)
 define('PLUGIN_REF_USAGE', "([pagename/]attached-file-name[,parameters, ... ][,title])");
 
-// Cache Time
-define('PLUGIN_REF_CACHE_TIME', 2592000);
+// Cache Setting
+define('PLUGIN_REF_CACHE_TIME', 2592000);    // 30days
+define('PLUGIN_REF_TIMEZONE_OFFSET', 32400); // Asia/Tokyo
 
 function plugin_ref_inline()
 {
@@ -401,9 +402,9 @@ function plugin_ref_action()
 		return array('msg'=>'Attach file not found', 'body'=>$usage);
 
 	$modtime = filemtime($ref);
-	$modsince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
+	$modsince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) - PLUGIN_REF_TIMEZONE_OFFSET;
 	// 更新がない時は304を返して終了
-	if ($modsince && $modsince >= $modtime) {
+	if ($modsince && ($modsince >= $modtime)) {
 		header('HTTP/1.1 304 Not Modified');
 		exit;
 	}
