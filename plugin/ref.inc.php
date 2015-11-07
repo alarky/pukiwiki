@@ -45,6 +45,10 @@ define('PLUGIN_REF_IMAGE', '/\.(gif|png|jpe?g)$/i');
 // Usage (a part of)
 define('PLUGIN_REF_USAGE', "([pagename/]attached-file-name[,parameters, ... ][,title])");
 
+// Cache Setting
+define('PLUGIN_REF_CACHE_TIME', 2592000);    // 30days
+define('PLUGIN_REF_TIMEZONE_OFFSET', 32400); // Asia/Tokyo
+
 function plugin_ref_inline()
 {
 	// Not reached, because of "$aryargs[] = & $body" at plugin.php
@@ -397,6 +401,14 @@ function plugin_ref_action()
 	if(! file_exists($ref))
 		return array('msg'=>'Attach file not found', 'body'=>$usage);
 
+	$modtime = filemtime($ref);
+	$modsince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) - PLUGIN_REF_TIMEZONE_OFFSET;
+	// 更新がない時は304を返して終了
+	if ($modsince && ($modsince >= $modtime)) {
+		header('HTTP/1.1 304 Not Modified');
+		exit;
+	}
+
 	$got = @getimagesize($ref);
 	if (! isset($got[2])) $got[2] = FALSE;
 	switch ($got[2]) {
@@ -428,6 +440,12 @@ function plugin_ref_action()
 	header('Content-Disposition: inline; filename="' . $filename . '"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
 	header('Content-Length: ' . $size);
 	header('Content-Type: '   . $type);
+
+	// キャッシュ用ヘッダ出力
+	header('Cache-Control: private, max-age=' . PLUGIN_REF_CACHE_TIME);
+	header('Expires: '       . date('D, d M Y H:i:s', UTIME + PLUGIN_REF_CACHE_TIME) . ' GMT');
+	header('Last-Modified: ' . date('D, d M Y H:i:s', $modtime)                      . ' GMT');
+	
 	@readfile($ref);
 	exit;
 }
